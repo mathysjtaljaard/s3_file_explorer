@@ -2,11 +2,19 @@ import React, {Component} from "react";
 import "./App.css";
 
 class App extends Component {
-  selectedKey;
 
   constructor(props) {
     super(props);
     this.state = {selected: false, selectedObject: ''};
+    this.handleOnClick = this.handleOnClick.bind(this);
+  }
+
+  handleOnClick(data) {
+    this.setState(prevState => ({
+        selected: data.selected,
+        selectedObject: data.data
+      })
+    );
   }
 
   render() {
@@ -14,15 +22,24 @@ class App extends Component {
     return (
       <div className="App">
         <div>
-          //Section to display lists
-          <ul>
-            {this.showkeys()}
-          </ul>
+          <ListData onChange={this.handleOnClick}/>
         </div>
-        // section to display data
         <div>
           {this.state.selected && <DisplayData data={this.state.selectedObject}/>}
         </div>
+      </div>
+    );
+  }
+}
+
+class ListData extends React.Component {
+
+  render() {
+    return (
+      <div>
+        <ul>
+          {this.showkeys()}
+        </ul>
       </div>
     );
   }
@@ -39,30 +56,33 @@ class App extends Component {
   }
 
   showKeyData(value) {
-    var keyData = [
+    var keyDataList = [
       {'Key': 'key1', 'Data': {'data': 'some json data1'}},
-      {'Key': 'key2', 'Data': {'data': 'some json data1'}},
-      {'Key': 'key3', 'Data': {'data': 'some json data1'}}];
+      {'Key': 'key2', 'Data': {'data': 'some json data2'}},
+      {'Key': 'key3', 'Data': {'data': 'some json data3'}}];
 
-
-    console.log('Pressed ', value);
-    return keyData.forEach((data) => {
-      if (data.Key === value) {
-        this.setState(prevState => ({
-          selected: true,
-          selectedObject: data
-        }));
+    var dataReturned = {
+      data: null,
+      selected: false
+    };
+    console.log(value);
+    for (var keyData of keyDataList ) {
+      if (keyData.Key === value) {
+        dataReturned.data = keyData;
+        dataReturned.selected = true;
       }
-    });
+    }
+
+    this.props.onChange(dataReturned);
   }
 }
 
 class DisplayData extends React.Component {
   render() {
     return (<div>
-              <label>{this.props.data.Key}</label>
-              <textarea value={JSON.stringify(this.props.data.Data)} readOnly></textarea>
-            </div>);
+      <label>{this.props.data.Key}</label>
+      <textarea value={JSON.stringify(this.props.data.Data)} readOnly></textarea>
+    </div>);
   }
 }
 
