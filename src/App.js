@@ -1,13 +1,40 @@
 import React, {Component} from "react";
 import "./App.css";
+import * as S3 from "./services/aws_connection";
 
 class App extends Component {
 
   constructor(props) {
     super(props);
-    this.state = {selected: false, selectedObject: {}, displayDataObject: {}};
+    this.state = {
+      selected: false,
+      selectedObject: {},
+      displayDataObject: {},
+      bucketDataList: {}
+    };
+
     this.handleOnClick = this.handleOnClick.bind(this);
     this.getDisplayData = this.getDisplayData.bind(this);
+    this.getData();
+  }
+
+  getData() {
+    S3.listObjects().then((data) => {
+      if (data && data.Contents) {
+        var keyList = [];
+        data.Contents.forEach((value) => {
+          keyList.push(value.Key);
+        });
+      }
+      return Promise.resolve(keyList);
+    }).then((keyList) => {
+      this.setState(prevState => ({
+        bucketDataList: keyList
+      }));
+    }).catch((err) => {
+      console.log(err);
+    });
+
   }
 
   handleOnClick(childData) {
@@ -21,11 +48,19 @@ class App extends Component {
   }
 
   getDisplayData(object) {
-    var jsonData = JSON.stringify(object.Data, undefined, 4);
+    var jsonData = JSON.stringify(JSON.parse(new Buffer(object.Body).toString()), undefined, 4);
     var rows = jsonData.split('\n').length;
+
+    var json = {
+      LastModified: object.LastModified,
+      ContentType: object.ContentType,
+      Body: object.Body,
+      Metadata: object.Metadata
+    };
     return {
       key: object.Key,
-      jsonData: jsonData,
+      rawData: JSON.stringify(json),
+      jsonData: new Buffer(object.Body).toString(),
       rows: rows,
       cols: 50
     };
@@ -36,7 +71,7 @@ class App extends Component {
     return (
       <div className="App">
         <div>
-          <ListData onChange={this.handleOnClick}/>
+          <ListData onChange={this.handleOnClick} keyList={this.state.bucketDataList}/>
         </div>
         <div>
           {this.state.selected && <DisplayData data={this.state.displayDataObject}/>}
@@ -52,66 +87,50 @@ class ListData extends React.Component {
     return (
       <div>
         <ul>
-          {this.showkeys()}
+          {this.showKeys()}
         </ul>
       </div>
     );
   }
 
-  showkeys() {
-    var keys = ['key1', 'key2', 'key3'];
+  showKeys() {
+    var keys = this.props.keyList;
+    if (keys && keys.length > 0) {
+      return keys.map((value) => {
 
-    return keys.map((value) => {
-      return <li key={value}>
-        <a href="#" onClick={(e) => this.showKeyData(value)}>
-          {value}
-        </a></li>
-    });
+        if (value.endsWith('/')) {
+          return <li key={value}>
+            Folder:  {value}
+            </li>
+        } else {
+          return <li key={value}>
+            File: <a href="#" onClick={(e) => this.showKeyData(value)}>
+              {value}
+            </a></li>
+        }
+      });
+    } else {
+      return <div> ... retrieving data </div>;
+    }
+
   }
 
   showKeyData(value) {
-    var keyDataList = [
-      {'Key': 'key1',
-        'Data':
-          {'data': 'some json data1',
-            'more': 'more details for 1',
-            'more1': 'more details for 1',
-            'more2': 'more details for 1'
-          }
-      },
-      {'Key': 'key2',
-        'Data':
-          {'data': 'some json data2',
-            'more': 'more details for 2',
-            'more1': 'more details for 2',
-            'more2': 'more details for 2',
-            'more3': 'more details for 2'
-          }
-      },
-      {'Key': 'key3',
-        'Data':
-          {'data': 'some json data3',
-            'more': 'more details for 3',
-            'more1': 'more details for 3',
-            'more2': 'more details for 3',
-            'more3': 'more details for 3',
-            'more4': 'more details for 3'
-          }
-      }
-    ];
-
     var dataReturned = {
       data: null,
       selected: false
     };
-    for (var keyData of keyDataList ) {
-      if (keyData.Key === value) {
-        dataReturned.data = keyData;
-        dataReturned.selected = true;
-      }
-    }
 
-    this.props.onChange(dataReturned);
+    console.log('value in showKeyData', value);
+    S3.getObject(value).then((data) => {
+      console.log('object data returned', JSON.stringify(data));
+      dataReturned.data = data;
+      dataReturned.selected = true;
+      this.props.onChange(dataReturned);
+    }).catch((err) => {
+      console.log('error during getObject', err);
+      this.props.onChange(dataReturned);
+    });
   }
 }
 
@@ -119,7 +138,7 @@ class DisplayData extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = { rows: 2, cols: 50, data: ''};
+    this.state = {rows: 2, cols: 50, data: ''};
   }
 
   render() {
@@ -128,8 +147,13 @@ class DisplayData extends React.Component {
         <label>{this.props.data.key}</label>
       </div>
       <div>
+        <label>Raw Data</label><p/>
+        <textarea rows={this.props.data.rows} cols={this.props.data.cols} value={this.props.data.rawData} readOnly>
+        </textarea>
+      </div>
+      <div>
+        <label>Body Data</label><p/>
         <textarea rows={this.props.data.rows} cols={this.props.data.cols} value={this.props.data.jsonData} readOnly>
-
         </textarea>
       </div>
     </div>);
