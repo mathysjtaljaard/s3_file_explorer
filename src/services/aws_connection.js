@@ -1,6 +1,7 @@
 /**
  * Created by mathysjt on 2/5/17.
  */
+//TODO, need to create this folder to allow for credentials to be enabled
 import creds from "../creds/credentials.json";
 import * as AWS from "aws-sdk";
 var credentials = new AWS.Credentials({ accessKeyId: creds.accessKeyId,

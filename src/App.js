@@ -2,6 +2,9 @@ import React, {Component} from "react";
 import "./App.css";
 import * as S3 from "./services/aws_connection";
 
+//import ListData from "components/DataList";
+//import DataDisplay from "components/DisplayData"
+
 class App extends Component {
 
   constructor(props) {
@@ -16,6 +19,19 @@ class App extends Component {
     this.handleOnClick = this.handleOnClick.bind(this);
     this.getDisplayData = this.getDisplayData.bind(this);
     this.getData();
+  }
+
+  render() {
+    return (
+      <div className="App">
+        <div>
+          <ListData onChange={this.handleOnClick} keyList={this.state.bucketDataList}/>
+        </div>
+        <div>
+          {this.state.selected && <DisplayData data={this.state.displayDataObject}/>}
+        </div>
+      </div>
+    );
   }
 
   getData() {
@@ -64,20 +80,6 @@ class App extends Component {
       rows: rows,
       cols: 50
     };
-  }
-
-  render() {
-
-    return (
-      <div className="App">
-        <div>
-          <ListData onChange={this.handleOnClick} keyList={this.state.bucketDataList}/>
-        </div>
-        <div>
-          {this.state.selected && <DisplayData data={this.state.displayDataObject}/>}
-        </div>
-      </div>
-    );
   }
 }
 
@@ -158,8 +160,6 @@ class DisplayData extends React.Component {
       </div>
     </div>);
   }
-
-
 }
 
 export default App;
